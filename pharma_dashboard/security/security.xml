@@ -1,0 +1,8 @@
+<odoo>
+    <record id="group_dashboard_viewer" model="res.groups">
+        <field name="name">Pharma Dashboard Viewer</field>
+    </record>
+    <record id="base.group_system" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('pharma_dashboard.group_dashboard_viewer'))]"/>
+    </record>
+</odoo>

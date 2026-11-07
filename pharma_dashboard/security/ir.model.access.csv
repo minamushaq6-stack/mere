@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_share_viewer,share viewer,model_pharma_dashboard_share,pharma_dashboard.group_dashboard_viewer,1,0,0,0
+access_share_acc,share manager,model_pharma_dashboard_share,account.group_account_manager,1,1,1,1
+access_share_admin,share admin,model_pharma_dashboard_share,base.group_system,1,1,1,1
