@@ -1,33 +1,171 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
+<t t-name="pharma_dashboard.CountUp"><span t-esc="text"/></t>
+
 <t t-name="pharma_dashboard.BarList">
     <t t-set="mx" t-value="max(items, vkey)"/>
     <div t-if="!items.length" class="pd_empty">لا توجد بيانات في هذه الفترة</div>
     <div t-foreach="items" t-as="i" t-key="i_index" class="pd_row">
         <div class="pd_row_top">
+            <span t-attf-class="pd_rk r#{i_index + 1}" t-esc="i_index + 1"/>
             <span class="pd_name" t-att-class="{pd_link: i.id and link}" t-on-click="() => link and openItems(i.id, i.name, link)" t-esc="i.name"/>
             <span class="pd_val"><t t-esc="fmt(i[vkey])"/></span>
         </div>
-        <div class="pd_track"><div t-att-class="'pd_fill ' + tone" t-attf-style="width: #{pct(i[vkey], mx)}%"/></div>
+        <div class="pd_track"><div t-att-class="'pd_fill ' + tone" t-attf-style="width: #{pct(i[vkey], mx)}%; animation-delay: #{i_index * 60}ms"/></div>
         <div t-if="i.sub" class="pd_sub" t-esc="i.sub"/>
     </div>
 </t>
 
+<!-- دائرة بيانية: parts, size, cmain, csub -->
+<t t-name="pharma_dashboard.Donut">
+    <div class="pd_dn" t-attf-style="width: #{size}px; height: #{size}px">
+        <svg viewBox="0 0 100 100" class="pd_dsvg" aria-hidden="true">
+            <circle class="pd_dbg" cx="50" cy="50" r="40" pathLength="100"/>
+            <circle t-foreach="parts" t-as="p" t-key="p_index" class="pd_dseg" cx="50" cy="50" r="40" pathLength="100"
+                    t-att-stroke="p.color"
+                    t-attf-style="stroke-dasharray: #{p.dash} #{100 - p.dash}; stroke-dashoffset: #{p.off}; animation-delay: #{p_index * 110}ms"/>
+        </svg>
+        <div class="pd_dcenter"><b t-esc="cmain"/><span t-esc="csub"/></div>
+    </div>
+</t>
+
+<!-- بطاقة دائرة: c = {kind,title,icon,topTitle,top,parts,total,clickable,hint,cmain?,csub?} -->
+<t t-name="pharma_dashboard.DonutCard">
+    <div t-att-class="'pd_dcard ' + (c.clickable ? 'clickable' : '')" t-on-click="() => c.clickable and this.openDonut(c.kind)">
+        <div class="pd_dcard_head">
+            <span class="pd_dcard_ic"><i t-att-class="'fa ' + c.icon"/></span>
+            <h4 t-esc="c.title"/>
+            <i t-if="c.clickable" class="fa fa-angle-left pd_go"/>
+        </div>
+        <t t-if="c.parts.length and c.top">
+            <div class="pd_dcard_top">
+                <span t-esc="c.topTitle"/>
+                <b t-esc="c.top.name"/>
+                <em><t t-esc="fmt(c.top.value)"/> <t t-esc="cur"/> · <t t-esc="c.top.sub"/></em>
+            </div>
+            <div class="pd_dcard_body">
+                <t t-call="pharma_dashboard.Donut">
+                    <t t-set="parts" t-value="c.parts"/><t t-set="size" t-value="124"/>
+                    <t t-set="cmain" t-value="c.cmain || compact(c.total)"/><t t-set="csub" t-value="c.csub || cur"/>
+                </t>
+                <div class="pd_leg">
+                    <div t-foreach="c.parts" t-as="p" t-key="p_index" class="pd_leg_row">
+                        <span class="pd_leg_dot" t-attf-style="background: #{p.color}"/>
+                        <span class="pd_leg_name" t-esc="p.name"/>
+                        <b><t t-esc="p.share.toFixed(0)"/>%</b>
+                    </div>
+                </div>
+            </div>
+        </t>
+        <div t-else="" class="pd_dcard_empty"><i t-att-class="'fa ' + c.icon"/><span t-esc="c.hint"/></div>
+    </div>
+</t>
+
+<!-- حلقة نسبة: rpct (0-100), rtone, rlabel, rsize -->
+<t t-name="pharma_dashboard.Ring">
+    <div class="pd_ring" t-attf-style="width: #{rsize}px; height: #{rsize}px">
+        <svg viewBox="0 0 100 100" class="pd_dsvg" aria-hidden="true">
+            <circle class="pd_dbg" cx="50" cy="50" r="40" pathLength="100"/>
+            <circle t-attf-class="pd_dseg pd_rseg #{rtone}" cx="50" cy="50" r="40" pathLength="100"
+                    t-attf-style="stroke-dasharray: #{rpct} #{100 - rpct}"/>
+        </svg>
+        <div class="pd_dcenter"><b><t t-esc="rpct.toFixed(0)"/>%</b><span t-esc="rlabel"/></div>
+    </div>
+</t>
+
+<!-- أعمدة: cc = {two, ticks, cols[{label,a,ah,b,bh,tone}]} -->
+<t t-name="pharma_dashboard.ColChart">
+    <div class="pd_cc">
+        <div class="pd_cc_y"><span t-foreach="cc.ticks" t-as="tk" t-key="tk_index" t-esc="compact(tk)"/></div>
+        <div class="pd_cc_area">
+            <div class="pd_grid_lines"><i/><i/><i/><i/><i/></div>
+            <div class="pd_cc_cols">
+                <div t-foreach="cc.cols" t-as="c" t-key="c_index" class="pd_cc_col">
+                    <div class="pd_cc_bars">
+                        <div t-attf-class="pd_cc_bar a #{c.tone}" t-att-data-tip="fmt(c.a)"
+                             t-attf-style="height: #{c.ah}%; animation-delay: #{c_index * 70}ms">
+                            <span class="pd_cc_val" t-if="!cc.two and c.a" t-esc="compact(c.a)"/>
+                        </div>
+                        <div t-if="cc.two" class="pd_cc_bar b" t-att-data-tip="fmt(c.b)"
+                             t-attf-style="height: #{c.bh}%; animation-delay: #{c_index * 70 + 40}ms"/>
+                    </div>
+                    <div class="pd_cc_lbl" t-esc="c.label"/>
+                </div>
+            </div>
+        </div>
+    </div>
+</t>
+
+<!-- خط: lc = {lines[{line,area}], labels, hi, lo} -->
+<t t-name="pharma_dashboard.LineChart">
+    <div class="pd_lc">
+        <span class="pd_lc_hi" t-esc="lc.hi"/>
+        <span class="pd_lc_lo" t-esc="lc.lo"/>
+        <svg class="pd_lc_svg" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+                <linearGradient id="pdLcFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            <g class="pd_lc_reveal">
+                <path t-if="lc.lines.length" t-att-d="lc.lines[0].area" fill="url(#pdLcFill)"/>
+                <path t-foreach="lc.lines" t-as="ln" t-key="ln_index" t-att-d="ln.line" fill="none"
+                      t-attf-class="pd_lc_line l#{ln_index}" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+            </g>
+        </svg>
+        <div class="pd_lc_lbls"><span t-foreach="lc.labels" t-as="lb" t-key="lb_index" t-esc="lb"/></div>
+    </div>
+</t>
+
+<!-- محفظة مصغّرة للنظرة العامة: w -->
+<t t-name="pharma_dashboard.WalletMini">
+    <div t-att-class="'pd_wmini ' + (w.code === 'USD' ? 'usd' : (w.code === 'IQD' ? 'iqd' : 'other'))" t-on-click="() => state.tab = 'cash'">
+        <div class="pd_wm_top">
+            <div class="pd_cur_badge sm2" t-esc="w.symbol"/>
+            <div class="pd_wm_name">
+                <b t-esc="w.name"/>
+                <span>الرصيد الكلي بدفتر الأستاذ (يشمل الافتتاحي)</span>
+            </div>
+            <div class="pd_wm_total"><CountUp value="w.total" dec="w.code === 'USD' ? 2 : 0"/> <small t-esc="w.symbol"/></div>
+        </div>
+        <div class="pd_wm_flow">
+            <span class="pos"><i class="fa fa-arrow-down"/> داخل <b t-esc="fmtC(w.in, w.code)"/></span>
+            <span class="neg"><i class="fa fa-arrow-up"/> خارج <b t-esc="fmtC(w.out, w.code)"/></span>
+        </div>
+        <div class="pd_wm_boxes">
+            <span t-if="!w.boxes.length" class="pd_wm_none">لا توجد صناديق أو بنوك بهذه العملة</span>
+            <span t-foreach="w.boxes.slice(0, 3)" t-as="b" t-key="b.id" class="pd_wm_chip" t-on-click.stop="() => this.openBox(b)">
+                <i t-att-class="'fa ' + (b.type === 'cash' ? 'fa-inbox' : 'fa-university')"/>
+                <t t-esc="b.name"/> <b t-esc="fmtC(b.balance, w.code)"/>
+            </span>
+            <span t-if="w.boxes.length > 3" class="pd_wm_more">+<t t-esc="w.boxes.length - 3"/></span>
+        </div>
+    </div>
+</t>
+
 <t t-name="pharma_dashboard.Main">
-<div class="o_pharma_db">
+<div class="o_pharma_db" t-att-class="'pd_' + state.theme">
     <div class="pd_header">
-        <div>
-            <h1>لوحة المعلومات</h1>
-            <div class="pd_company" t-if="state.data" t-esc="state.data.company"/>
+        <div class="pd_title">
+            <div class="pd_logo"><i class="fa fa-medkit"/></div>
+            <div>
+                <h1>لوحة المعلومات</h1>
+                <div class="pd_company" t-if="state.data" t-esc="state.data.company"/>
+            </div>
         </div>
         <div class="pd_filters">
             <button t-foreach="periods" t-as="p" t-key="p.id" t-att-class="'pd_chip ' + (state.period === p.id ? 'active' : '')"
                     t-on-click="() => this.setPeriod(p.id)" t-esc="p.label"/>
             <input type="date" t-att-value="state.from" t-on-change="(e) => this.onDate(e, 'from')"/>
-            <span>→</span>
+            <span class="pd_arrow"><i class="fa fa-long-arrow-left"/></span>
             <input type="date" t-att-value="state.to" t-on-change="(e) => this.onDate(e, 'to')"/>
-            <button class="pd_chip" t-on-click="() => this.load()" title="تحديث"><i class="fa fa-refresh"/></button>
+            <button class="pd_chip icon" t-on-click="() => this.load()" title="تحديث"><i class="fa fa-refresh"/></button>
+            <div class="pd_theme" role="group" aria-label="المظهر">
+                <button t-att-class="state.theme === 'light' ? 'on' : ''" title="الوضع الفاتح" t-on-click="() => this.setTheme('light')"><i class="fa fa-sun-o"/></button>
+                <button t-att-class="state.theme === 'dark' ? 'on' : ''" title="الوضع الداكن" t-on-click="() => this.setTheme('dark')"><i class="fa fa-moon-o"/></button>
+            </div>
         </div>
     </div>
 
@@ -40,88 +178,318 @@
 
     <div t-if="state.loading" class="pd_loading"><i class="fa fa-spinner fa-spin fa-2x"/></div>
 
-    <t t-elif="state.data" t-set="d" t-value="state.data">
+    <t t-elif="state.data">
+        <t t-set="d" t-value="state.data"/>
         <!-- ============ نظرة عامة ============ -->
         <t t-if="state.tab === 'overview'">
+
+            <!-- 1) المؤشرات السريعة (في البداية) -->
             <div class="pd_kpis">
                 <div t-foreach="kpis" t-as="k" t-key="k_index" t-att-class="'pd_kpi ' + k.tone" t-on-click="() => state.tab = k.tab">
                     <div class="pd_kpi_icon"><i t-att-class="'fa ' + k.icon"/></div>
                     <div>
                         <div class="pd_kpi_label" t-esc="k.label"/>
-                        <div class="pd_kpi_value"><t t-esc="fmt(k.value)"/> <small t-esc="d.currency"/></div>
+                        <div class="pd_kpi_value"><CountUp value="k.value"/> <small t-esc="d.currency"/></div>
                         <div class="pd_kpi_sub" t-if="k.sub" t-esc="k.sub"/>
                     </div>
                 </div>
             </div>
-            <div class="pd_grid two">
-                <div class="pd_card">
-                    <h3>المبيعات مقابل المشتريات (آخر 12 شهر)</h3>
-                    <div class="pd_legend"><span class="dot purple"/> مبيعات <span class="dot orange"/> مشتريات</div>
-                    <t t-set="tm" t-value="trendMax()"/>
-                    <div class="pd_chart">
-                        <div t-foreach="d.trend" t-as="t" t-key="t.m" class="pd_col">
-                            <div class="pd_bars">
-                                <div class="pd_bar purple" t-attf-style="height: #{pct(t.sales, tm)}%" t-att-title="fmt(t.sales)"/>
-                                <div class="pd_bar orange" t-attf-style="height: #{pct(t.purchases, tm)}%" t-att-title="fmt(t.purchases)"/>
-                            </div>
-                            <div class="pd_lbl" t-esc="t.m.slice(2)"/>
-                        </div>
+
+            <!-- 2) تحليل المبيعات -->
+            <t t-set="ch" t-value="chart"/>
+            <t t-set="ss" t-value="salesStats"/>
+            <section class="pd_card pd_sales">
+                <div class="pd_card_head">
+                    <h3>تحليل المبيعات</h3>
+                    <div class="pd_seg">
+                        <button t-att-class="!ch.daily ? 'on' : ''" t-on-click="() => state.trendMode = 'monthly'">آخر 12 شهر</button>
+                        <button t-att-class="ch.daily ? 'on' : ''" t-att-disabled="!d.daily.length"
+                                t-att-title="d.daily.length ? '' : 'العرض اليومي متاح للفترات حتى 3 أشهر'"
+                                t-on-click="() => state.trendMode = 'daily'">يومي</button>
                     </div>
                 </div>
-                <div class="pd_card">
-                    <h3>الصناديق والحسابات البنكية</h3>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.cash"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'teal'"/><t t-set="link" t-value="false"/></t>
+                <div class="pd_sales_body">
+                    <div class="pd_sales_main">
+                        <div class="pd_legend">
+                            <span class="dot sales"/> مبيعات
+                            <span class="dot purch"/> مشتريات
+                            <span class="pd_hover" t-if="state.hover">
+                                <b t-esc="state.hover.full"/>:
+                                مبيعات <b t-esc="fmt(state.hover.sales)"/> — مشتريات <b t-esc="fmt(state.hover.purchases)"/> <t t-esc="d.currency"/>
+                            </span>
+                        </div>
+                        <div class="pd_plot">
+                            <div class="pd_yaxis"><span t-foreach="ch.ticks" t-as="tk" t-key="tk_index" t-esc="compact(tk)"/></div>
+                            <div class="pd_plot_area">
+                                <div class="pd_grid_lines"><i/><i/><i/><i/><i/></div>
+                                <div class="pd_cols">
+                                    <div t-foreach="ch.cols" t-as="c" t-key="c.key" t-att-class="'pd_col ' + (c.on ? 'on' : 'off')"
+                                         t-on-mouseenter="() => state.hover = c" t-on-mouseleave="() => state.hover = null">
+                                        <div class="pd_bars">
+                                            <div class="pd_bar sales" t-attf-style="height: #{c.sh}%; animation-delay: #{c_index * 40}ms"/>
+                                            <div class="pd_bar purch" t-attf-style="height: #{c.ph}%; animation-delay: #{c_index * 40 + 30}ms"/>
+                                        </div>
+                                        <div class="pd_lbl" t-esc="c.label"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <aside class="pd_sales_side">
+                        <div class="pd_side_main">
+                            <span>مبيعات الفترة</span>
+                            <b><CountUp value="d.sales_total"/> <small t-esc="d.currency"/></b>
+                            <em t-if="ss.delta !== null" t-att-class="ss.up ? 'up' : 'down'">
+                                <i t-att-class="'fa ' + (ss.up ? 'fa-caret-up' : 'fa-caret-down')"/>
+                                <t t-esc="Math.abs(ss.delta).toFixed(1)"/>% عن الفترة السابقة
+                            </em>
+                        </div>
+                        <div class="pd_side_stats">
+                            <div><span>عدد الفواتير</span><b t-esc="fmt(d.sales_count)"/></div>
+                            <div><span>متوسط الفاتورة</span><b t-esc="fmt(ss.avg)"/></div>
+                        </div>
+                        <svg class="pd_spark" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="pdSparkFill" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.45"/>
+                                    <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <g class="pd_lc_reveal">
+                                <path t-att-d="spark.area" fill="url(#pdSparkFill)"/>
+                                <path t-att-d="spark.line" fill="none" stroke="#22d3ee" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+                            </g>
+                        </svg>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- 3) الصناديق: دولار ودينار (مصغّرة) -->
+            <div class="pd_wallets mini">
+                <t t-foreach="d.wallets" t-as="wl" t-key="wl.code">
+                    <t t-call="pharma_dashboard.WalletMini"><t t-set="w" t-value="wl"/></t>
+                </t>
+            </div>
+
+            <!-- 4) أعلى محافظة / مندوب تجاري / مندوب علمي + النفقات -->
+            <div class="pd_dgrid">
+                <t t-foreach="donutCards" t-as="c" t-key="c.kind">
+                    <t t-call="pharma_dashboard.DonutCard"/>
+                </t>
+                <t t-set="et" t-value="expTile"/>
+                <div t-att-class="'pd_dcard pd_etile ' + (et.total ? 'clickable' : '')" t-on-click="() => this.openExpenses()">
+                    <div class="pd_dcard_head">
+                        <span class="pd_dcard_ic red"><i class="fa fa-credit-card"/></span>
+                        <h4>النفقات</h4>
+                        <i t-if="et.total" class="fa fa-angle-left pd_go"/>
+                    </div>
+                    <t t-if="et.total">
+                        <div class="pd_et_total"><CountUp value="et.total"/> <small t-esc="d.currency"/></div>
+                        <div class="pd_et_sub">إجمالي النفقات (موديل النفقات) — <t t-esc="et.count"/> فئة</div>
+                        <div class="pd_et_bar">
+                            <i t-foreach="et.parts" t-as="p" t-key="p_index" t-attf-style="width: #{p.share}%; background: #{p.color}"/>
+                        </div>
+                        <div class="pd_dcard_top">
+                            <span>أعلى فئة إنفاق</span>
+                            <b t-esc="et.top.name"/>
+                            <em><t t-esc="fmt(et.top.value)"/> <t t-esc="d.currency"/> · <t t-esc="et.top.share.toFixed(1)"/>%</em>
+                        </div>
+                        <div class="pd_et_cta">اضغط لعرض التفاصيل <i class="fa fa-angle-left"/></div>
+                    </t>
+                    <div t-else="" class="pd_dcard_empty"><i class="fa fa-credit-card"/><span>لا توجد نفقات معتمدة في موديل النفقات لهذه الفترة</span></div>
                 </div>
             </div>
+
+            <!-- 5) المخزون (مبسّط) -->
+            <t t-set="iv" t-value="invOverview"/>
+            <section class="pd_card pd_invc">
+                <div class="pd_card_head">
+                    <h3>المخزون</h3>
+                    <button class="pd_link_btn" t-on-click="() => state.tab = 'stock'">التفاصيل <i class="fa fa-angle-left"/></button>
+                </div>
+                <div class="pd_inv_body">
+                    <div class="pd_inv_total">
+                        <span>إجمالي قيمة المخزون</span>
+                        <b><CountUp value="d.inventory.total"/> <small t-esc="d.currency"/></b>
+                        <em><t t-esc="fmt(d.inventory.items)"/> صنف — <t t-esc="fmt(d.inventory.qty)"/> وحدة</em>
+                        <em t-if="d.inventory.from_book">حسب حساب المخزون في دفتر الأستاذ</em>
+                        <em t-else="">تقديري بسعر التكلفة (لم يُحدَّد حساب تقييم المخزون)</em>
+                    </div>
+                    <div class="pd_inv_donut">
+                        <t t-if="iv.comp.parts.length">
+                            <t t-call="pharma_dashboard.Donut">
+                                <t t-set="parts" t-value="iv.comp.parts"/><t t-set="size" t-value="128"/>
+                                <t t-set="cmain" t-value="compact(d.inventory.total)"/><t t-set="csub" t-value="d.currency"/>
+                            </t>
+                            <div class="pd_leg">
+                                <div t-foreach="iv.comp.parts" t-as="p" t-key="p_index" class="pd_leg_row">
+                                    <span class="pd_leg_dot" t-attf-style="background: #{p.color}"/>
+                                    <span class="pd_leg_name" t-esc="p.name"/>
+                                    <b><t t-esc="p.share.toFixed(0)"/>%</b>
+                                </div>
+                            </div>
+                        </t>
+                        <div t-else="" class="pd_empty">لا يوجد مخزون</div>
+                    </div>
+                    <div class="pd_inv_top">
+                        <t t-if="iv.best">
+                            <div class="pd_star">
+                                <div class="pd_star_ic"><i class="fa fa-trophy"/></div>
+                                <div class="pd_star_body">
+                                    <span>أعلى منتج مبيعاً (بالكمية)</span>
+                                    <b t-esc="iv.best.name"/>
+                                    <em><t t-esc="fmt(iv.best.qty)"/> وحدة — <t t-esc="fmt(iv.best.amount)"/> <t t-esc="d.currency"/></em>
+                                    <em t-if="iv.bestAmt" class="alt">الأعلى بالمبلغ: <t t-esc="iv.bestAmt.name"/></em>
+                                </div>
+                            </div>
+                            <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="iv.list"/><t t-set="vkey" t-value="'qty'"/><t t-set="tone" t-value="'teal'"/><t t-set="link" t-value="false"/></t>
+                        </t>
+                        <div t-else="" class="pd_empty">لا توجد مبيعات في هذه الفترة</div>
+                    </div>
+                </div>
+            </section>
         </t>
 
         <!-- ============ الصناديق ============ -->
         <t t-if="state.tab === 'cash'">
-            <div class="pd_note">اضغط على أي صندوق أو بنك لعرض حركاته التفصيلية. الفترة: <b t-esc="state.from"/> إلى <b t-esc="state.to"/></div>
-            <div class="pd_grid two">
-                <div t-foreach="d.boxes" t-as="b" t-key="b.id" class="pd_card pd_box" t-on-click="() => this.openBox(b)">
-                    <div class="pd_box_top">
-                        <h3><i t-att-class="'fa ' + (b.type === 'cash' ? 'fa-inbox' : 'fa-university')"/> <t t-esc="b.name"/></h3>
-                        <span class="pd_badge" t-esc="b.type === 'cash' ? 'صندوق' : 'بنك'"/>
-                    </div>
-                    <div class="pd_box_bal"><t t-esc="fmt(b.balance)"/> <small t-esc="d.currency"/></div>
-                    <div class="pd_box_stats">
-                        <div><span>رصيد أول الفترة</span><b t-esc="fmt(b.opening)"/></div>
-                        <div><span>الداخل</span><b class="pos" t-esc="fmt(b.in)"/></div>
-                        <div><span>الخارج</span><b class="neg" t-esc="fmt(b.out)"/></div>
-                        <div><span>رواجع زبائن (دفعناها)</span><b class="neg" t-esc="fmt(b.cust_refund)"/></div>
-                        <div><span>رواجع موردين (استلمناها)</span><b class="pos" t-esc="fmt(b.supp_refund)"/></div>
-                    </div>
+            <div class="pd_note">الأرصدة هي <b>الرصيد الكلي لحساب الصندوق في دفتر الأستاذ العام</b> (من كل اليوميات، شاملاً الأرصدة الافتتاحية). الحركة الداخلة والخارجة للفترة: <b t-esc="state.from"/> إلى <b t-esc="state.to"/>. اضغط على أي صندوق لعرض حركاته.</div>
+            <t t-foreach="d.wallets" t-as="w" t-key="w.code">
+                <t t-set="wc" t-value="walletCharts(w)"/>
+                <div class="pd_section_head">
+                    <div class="pd_cur_badge sm" t-esc="w.symbol"/>
+                    <h3 t-esc="w.name"/>
+                    <span class="pd_section_total"><CountUp value="w.total" dec="w.code === 'USD' ? 2 : 0"/> <small t-esc="w.symbol"/></span>
                 </div>
-            </div>
+                <div t-if="!w.boxes.length" class="pd_note">لا توجد صناديق أو بنوك بهذه العملة</div>
+                <t t-else="">
+                    <div class="pd_cash_charts">
+                        <div class="pd_card">
+                            <h3>توزيع الرصيد على الصناديق</h3>
+                            <t t-if="wc.donut.parts.length">
+                                <div class="pd_dcard_body">
+                                    <t t-call="pharma_dashboard.Donut">
+                                        <t t-set="parts" t-value="wc.donut.parts"/><t t-set="size" t-value="140"/>
+                                        <t t-set="cmain" t-value="compact(wc.donut.total)"/><t t-set="csub" t-value="w.symbol"/>
+                                    </t>
+                                    <div class="pd_leg">
+                                        <div t-foreach="wc.donut.parts" t-as="p" t-key="p_index" class="pd_leg_row">
+                                            <span class="pd_leg_dot" t-attf-style="background: #{p.color}"/>
+                                            <span class="pd_leg_name" t-esc="p.name"/>
+                                            <b><t t-esc="p.share.toFixed(0)"/>%</b>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                            <div t-else="" class="pd_empty">لا توجد أرصدة موجبة</div>
+                        </div>
+                        <div class="pd_card">
+                            <div class="pd_card_head"><h3>الداخل والخارج — آخر 6 أشهر</h3>
+                                <span class="pd_legend_inline"><span class="dot in"/> داخل <span class="dot out"/> خارج</span></div>
+                            <t t-if="wc.hasFlow"><t t-call="pharma_dashboard.ColChart"><t t-set="cc" t-value="wc.col"/></t></t>
+                            <div t-else="" class="pd_empty">لا توجد حركة في آخر 6 أشهر</div>
+                        </div>
+                        <div class="pd_card">
+                            <h3>منحنى الرصيد</h3>
+                            <t t-call="pharma_dashboard.LineChart"><t t-set="lc" t-value="wc.line"/></t>
+                        </div>
+                    </div>
+                    <div class="pd_grid two">
+                        <div t-foreach="w.boxes" t-as="b" t-key="b.id" class="pd_card pd_box" t-on-click="() => this.openBox(b)">
+                            <div class="pd_box_top">
+                                <h3><i t-att-class="'fa ' + (b.type === 'cash' ? 'fa-inbox' : 'fa-university')"/> <t t-esc="b.name"/></h3>
+                                <span class="pd_badge" t-esc="b.type === 'cash' ? 'صندوق' : 'بنك'"/>
+                            </div>
+                            <div class="pd_box_acc" t-esc="b.account"/>
+                            <div class="pd_box_bal"><CountUp value="b.balance" dec="w.code === 'USD' ? 2 : 0"/> <small t-esc="w.symbol"/></div>
+                            <div class="pd_io" title="نسبة الداخل إلى الخارج خلال الفترة">
+                                <i class="in" t-attf-style="width: #{ioShare(b)}%"/>
+                                <i class="out" t-attf-style="width: #{(b.in + b.out) ? 100 - ioShare(b) : 0}%"/>
+                            </div>
+                            <div class="pd_box_stats">
+                                <div><span>رصيد أول الفترة</span><b t-esc="fmtC(b.opening, w.code)"/></div>
+                                <div><span>الداخل</span><b class="pos" t-esc="fmtC(b.in, w.code)"/></div>
+                                <div><span>الخارج</span><b class="neg" t-esc="fmtC(b.out, w.code)"/></div>
+                                <div><span>رواجع زبائن (دفعناها)</span><b class="neg" t-esc="fmtC(b.cust_refund, w.code)"/></div>
+                                <div><span>رواجع موردين (استلمناها)</span><b class="pos" t-esc="fmtC(b.supp_refund, w.code)"/></div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
         </t>
 
         <!-- ============ الذمم ============ -->
         <t t-if="state.tab === 'debts'">
+            <t t-set="dv" t-value="debtView"/>
+            <div class="pd_kpis small">
+                <div t-foreach="dv.kpis" t-as="k" t-key="k_index" t-att-class="'pd_kpi static ' + k.tone">
+                    <div class="pd_kpi_icon"><i t-att-class="'fa ' + k.icon"/></div>
+                    <div>
+                        <div class="pd_kpi_label" t-esc="k.label"/>
+                        <div class="pd_kpi_value"><CountUp value="k.value"/> <small t-esc="d.currency"/></div>
+                        <div class="pd_kpi_sub" t-esc="k.sub"/>
+                    </div>
+                </div>
+            </div>
+            <div class="pd_card pd_vs">
+                <h3>لنا مقابل علينا</h3>
+                <div class="pd_vs_row"><span>ديون العملاء (لنا)</span>
+                    <div class="pd_track big"><div class="pd_fill green" t-attf-style="width: #{dv.recW}%"/></div><b t-esc="fmt(d.receivable.total)"/></div>
+                <div class="pd_vs_row"><span>ديون الموردين (علينا)</span>
+                    <div class="pd_track big"><div class="pd_fill red" t-attf-style="width: #{dv.payW}%; animation-delay: 120ms"/></div><b t-esc="fmt(d.payable.total)"/></div>
+            </div>
             <div class="pd_grid two">
                 <div class="pd_card">
-                    <h3>أكثر العملاء مديونية</h3>
-                    <div class="pd_note">الإجمالي <b t-esc="fmt(d.receivable.total)"/> — المتأخر <b class="neg" t-esc="fmt(d.receivable.overdue)"/></div>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.receivable.top"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'green'"/><t t-set="link" t-value="\'customer\'"/></t>
-                </div>
-                <div class="pd_card">
                     <h3>أعمار ديون العملاء</h3>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.receivable.aging"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'orange'"/><t t-set="link" t-value="false"/></t>
-                </div>
-                <div class="pd_card">
-                    <h3>أكثر الموردين مستحقات علينا</h3>
-                    <div class="pd_note">الإجمالي <b t-esc="fmt(d.payable.total)"/> — المتأخر <b class="neg" t-esc="fmt(d.payable.overdue)"/></div>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.payable.top"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'red'"/><t t-set="link" t-value="\'supplier\'"/></t>
+                    <div class="pd_aging">
+                        <t t-call="pharma_dashboard.Ring"><t t-set="rpct" t-value="dv.rec.over"/><t t-set="rtone" t-value="'red'"/><t t-set="rlabel" t-value="'متأخر'"/><t t-set="rsize" t-value="112"/></t>
+                        <div class="pd_aging_chart"><t t-call="pharma_dashboard.ColChart"><t t-set="cc" t-value="dv.rec.cc"/></t></div>
+                    </div>
                 </div>
                 <div class="pd_card">
                     <h3>أعمار ديون الموردين</h3>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.payable.aging"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'orange'"/><t t-set="link" t-value="false"/></t>
+                    <div class="pd_aging">
+                        <t t-call="pharma_dashboard.Ring"><t t-set="rpct" t-value="dv.pay.over"/><t t-set="rtone" t-value="'orange'"/><t t-set="rlabel" t-value="'متأخر'"/><t t-set="rsize" t-value="112"/></t>
+                        <div class="pd_aging_chart"><t t-call="pharma_dashboard.ColChart"><t t-set="cc" t-value="dv.pay.cc"/></t></div>
+                    </div>
+                </div>
+                <div class="pd_card">
+                    <h3>أكثر العملاء مديونية</h3>
+                    <div class="pd_note">الإجمالي <b t-esc="fmt(d.receivable.total)"/> — المتأخر <b class="neg" t-esc="fmt(d.receivable.overdue)"/>
+                        <span t-if="d.receivable.accounts and d.receivable.accounts.length"><br/>الحساب: <b t-esc="d.receivable.accounts.join('، ')"/></span></div>
+                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.receivable.top"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'green'"/><t t-set="link" t-value="'customer'"/></t>
+                </div>
+                <div class="pd_card">
+                    <h3>أكثر الموردين مستحقات علينا</h3>
+                    <div class="pd_note">الإجمالي <b t-esc="fmt(d.payable.total)"/> — المتأخر <b class="neg" t-esc="fmt(d.payable.overdue)"/>
+                        <span t-if="d.payable.accounts and d.payable.accounts.length"><br/>الحساب: <b t-esc="d.payable.accounts.join('، ')"/></span></div>
+                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.payable.top"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'red'"/><t t-set="link" t-value="'supplier'"/></t>
                 </div>
             </div>
         </t>
 
         <!-- ============ المبيعات ============ -->
         <t t-if="state.tab === 'sales'">
+            <div class="pd_kpis small">
+                <div t-foreach="salesKpis" t-as="k" t-key="k_index" t-att-class="'pd_kpi static ' + k.tone">
+                    <div class="pd_kpi_icon"><i t-att-class="'fa ' + k.icon"/></div>
+                    <div>
+                        <div class="pd_kpi_label" t-esc="k.label"/>
+                        <div class="pd_kpi_value"><CountUp value="k.value"/> <small t-esc="d.currency"/></div>
+                        <div class="pd_kpi_sub" t-if="k.sub" t-esc="k.sub"/>
+                    </div>
+                </div>
+            </div>
+            <div class="pd_card">
+                <div class="pd_card_head"><h3>المبيعات والمشتريات — آخر 12 شهر</h3>
+                    <span class="pd_legend_inline"><span class="dot sales"/> مبيعات <span class="dot purch"/> مشتريات</span></div>
+                <t t-call="pharma_dashboard.LineChart"><t t-set="lc" t-value="salesTrend"/></t>
+            </div>
+            <div class="pd_dgrid">
+                <t t-foreach="salesDonuts" t-as="c" t-key="c.kind">
+                    <t t-call="pharma_dashboard.DonutCard"/>
+                </t>
+            </div>
             <div class="pd_grid two">
                 <div class="pd_card">
                     <h3>الأكثر مبيعاً (بالكمية)</h3>
@@ -145,11 +513,11 @@
                 </div>
                 <div class="pd_card">
                     <h3>أفضل العملاء</h3>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.top_customers"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'purple'"/><t t-set="link" t-value="\'customer\'"/></t>
+                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.top_customers"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'purple'"/><t t-set="link" t-value="'customer'"/></t>
                 </div>
                 <div class="pd_card">
                     <h3>أكثر الموردين شراءً منهم</h3>
-                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.top_suppliers"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'orange'"/><t t-set="link" t-value="\'supplier\'"/></t>
+                    <t t-call="pharma_dashboard.BarList"><t t-set="items" t-value="d.top_suppliers"/><t t-set="vkey" t-value="'value'"/><t t-set="tone" t-value="'orange'"/><t t-set="link" t-value="'supplier'"/></t>
                 </div>
             </div>
         </t>
@@ -183,6 +551,11 @@
                 <div class="pd_kpi orange" t-if="inv.has_expiry"><div><div class="pd_kpi_label">ينتهي خلال 90 يوم</div><div class="pd_kpi_value"><t t-esc="fmt(inv.near_val)"/> <small t-esc="d.currency"/></div></div></div>
                 <div class="pd_kpi red" t-if="inv.negative"><div><div class="pd_kpi_label">أصناف برصيد سالب</div><div class="pd_kpi_value"><t t-esc="inv.negative"/></div></div></div>
             </div>
+            <div class="pd_dgrid">
+                <t t-foreach="stockCards" t-as="c" t-key="c.kind">
+                    <t t-call="pharma_dashboard.DonutCard"/>
+                </t>
+            </div>
             <div class="pd_grid two">
                 <div class="pd_card">
                     <h3>أعلى الأصناف قيمة في المخزون</h3>
@@ -211,6 +584,16 @@
 
         <!-- ============ الأرباح والشركاء ============ -->
         <t t-if="state.tab === 'partners'">
+            <div class="pd_grid two">
+                <div class="pd_card">
+                    <h3>الإيرادات والتكاليف والأرباح</h3>
+                    <t t-call="pharma_dashboard.ColChart"><t t-set="cc" t-value="plView"/></t>
+                </div>
+                <div class="pd_dgrid single">
+                    <t t-set="c" t-value="sharesCard"/>
+                    <t t-call="pharma_dashboard.DonutCard"/>
+                </div>
+            </div>
             <div class="pd_grid two">
                 <div class="pd_card">
                     <h3>قائمة الدخل للفترة</h3>
@@ -243,33 +626,117 @@
             <div class="pd_modal_head">
                 <h3 t-esc="state.modal.title"/>
                 <div>
+                    <button t-if="state.modal.back" class="pd_chip" t-on-click="() => this.goBack()"><i class="fa fa-arrow-right"/> رجوع</button>
                     <button t-if="state.modal.kind === 'items'" class="pd_chip" t-on-click="() => this.openPartnerForm(state.modal.partnerId)">فتح البطاقة</button>
-                    <button class="pd_chip" t-on-click="() => this.closeModal()"><i class="fa fa-times"/></button>
+                    <button class="pd_chip icon" t-on-click="() => this.closeModal()"><i class="fa fa-times"/></button>
                 </div>
             </div>
+
+            <!-- حركات صندوق / بنك -->
             <t t-if="state.modal.kind === 'box'">
+                <t t-set="cc" t-value="state.modal.box.currency"/>
+                <div class="pd_note">الحساب في دفتر الأستاذ: <b t-esc="state.modal.box.account"/> — الرصيد الكلي يشمل الافتتاحي</div>
                 <div class="pd_box_stats in_modal">
-                    <div><span>الرصيد الحالي</span><b t-esc="fmt(state.modal.box.balance)"/></div>
-                    <div><span>الداخل</span><b class="pos" t-esc="fmt(state.modal.box.in)"/></div>
-                    <div><span>الخارج</span><b class="neg" t-esc="fmt(state.modal.box.out)"/></div>
-                    <div><span>رواجع زبائن</span><b class="neg" t-esc="fmt(state.modal.box.cust_refund)"/></div>
-                    <div><span>رواجع موردين</span><b class="pos" t-esc="fmt(state.modal.box.supp_refund)"/></div>
+                    <div><span>رصيد دفتر الأستاذ</span><b t-esc="fmtC(state.modal.box.balance, cc)"/></div>
+                    <div><span>الداخل</span><b class="pos" t-esc="fmtC(state.modal.box.in, cc)"/></div>
+                    <div><span>الخارج</span><b class="neg" t-esc="fmtC(state.modal.box.out, cc)"/></div>
+                    <div><span>رواجع زبائن</span><b class="neg" t-esc="fmtC(state.modal.box.cust_refund, cc)"/></div>
+                    <div><span>رواجع موردين</span><b class="pos" t-esc="fmtC(state.modal.box.supp_refund, cc)"/></div>
                 </div>
                 <div class="pd_empty" t-if="!state.modal.rows.length">لا توجد حركات بهذه الفترة</div>
                 <div class="pd_scroll" t-else="">
                     <table class="pd_table">
-                        <thead><tr><th>التاريخ</th><th>المرجع</th><th>الجهة</th><th>داخل</th><th>خارج</th></tr></thead>
+                        <thead><tr><th>التاريخ</th><th>المرجع</th><th>اليومية</th><th>الجهة</th><th>داخل</th><th>خارج</th></tr></thead>
                         <tbody>
                             <tr t-foreach="state.modal.rows" t-as="m" t-key="m_index" t-att-class="m.tag ? 'warn' : ''">
-                                <td t-esc="m.date"/><td t-esc="m.ref"/>
+                                <td t-esc="m.date"/><td t-esc="m.ref"/><td t-esc="m.journal"/>
                                 <td><t t-esc="m.partner"/> <span t-if="m.tag" class="pd_badge" t-esc="m.tag"/></td>
-                                <td class="num pos"><t t-if="m.in" t-esc="fmt(m.in)"/></td>
-                                <td class="num neg"><t t-if="m.out" t-esc="fmt(m.out)"/></td>
+                                <td class="num pos"><t t-if="m.in" t-esc="fmtC(m.in, cc)"/></td>
+                                <td class="num neg"><t t-if="m.out" t-esc="fmtC(m.out, cc)"/></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </t>
+
+            <!-- ترتيب المناديب / المحافظات -->
+            <t t-elif="state.modal.kind === 'ranking'">
+                <div class="pd_rank">
+                    <t t-foreach="state.modal.rows" t-as="r" t-key="r_index">
+                        <div t-att-class="'pd_rank_row ' + (state.modal.open === r_index ? 'open' : '')" t-on-click="() => this.toggleOpen(r_index)">
+                            <span class="pd_rank_no" t-esc="r_index + 1"/>
+                            <div class="pd_rank_main">
+                                <div class="pd_rank_name" t-esc="r.name"/>
+                                <div class="pd_track"><div class="pd_fill teal" t-attf-style="width: #{pct(r.value, state.modal.max)}%"/></div>
+                            </div>
+                            <div class="pd_rank_val"><b t-esc="fmt(r.value)"/><small><t t-esc="r.share.toFixed(1)"/>%</small></div>
+                        </div>
+                        <div class="pd_rank_more" t-if="state.modal.open === r_index">
+                            <div class="pd_rank_facts">
+                                <div t-if="state.modal.unit === 'rep'"><span>عدد الطلبات</span><b t-esc="fmt(r.count)"/></div>
+                                <div t-if="state.modal.unit === 'rep'"><span>متوسط الطلب</span><b t-esc="fmt(r.avg)"/></div>
+                                <div t-if="state.modal.unit === 'gov'"><span>عدد العملاء</span><b t-esc="fmt(r.n_customers)"/></div>
+                                <div t-if="state.modal.unit === 'gov'"><span>عدد الطلبات</span><b t-esc="fmt(r.orders)"/></div>
+                            </div>
+                            <div class="pd_rank_cust_title">أكبر العملاء</div>
+                            <div t-if="!r.customers.length" class="pd_empty">لا توجد بيانات عملاء</div>
+                            <div t-foreach="r.customers" t-as="c" t-key="c_index" class="pd_rank_cust">
+                                <span t-esc="c.name"/>
+                                <span><b t-esc="fmt(c.value)"/> <small>(<t t-esc="c.count"/> طلب)</small></span>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </t>
+
+            <!-- كل فئات النفقات: دائرة + قائمة -->
+            <t t-elif="state.modal.kind === 'expenses'">
+                <div class="pd_exp_body">
+                    <div class="pd_donut_wrap">
+                        <t t-call="pharma_dashboard.Donut">
+                            <t t-set="parts" t-value="state.modal.donut.parts"/><t t-set="size" t-value="190"/>
+                            <t t-set="cmain" t-value="compact(state.data.expenses.total)"/><t t-set="csub" t-value="cur"/>
+                        </t>
+                    </div>
+                    <div class="pd_exp_list">
+                        <div t-foreach="state.data.expenses.items" t-as="it" t-key="it.id" class="pd_exp_row" t-on-click="() => this.openExpense(it, state.modal)">
+                            <span class="pd_exp_rank" t-esc="it_index + 1"/>
+                            <span class="pd_exp_dot" t-attf-style="background: #{color(it_index)}"/>
+                            <div class="pd_exp_main">
+                                <div class="pd_exp_top">
+                                    <span class="pd_exp_name" t-esc="it.name"/>
+                                    <b t-esc="fmt(it.value)"/>
+                                </div>
+                                <div class="pd_track"><div class="pd_fill" t-attf-style="width: #{it.share}%; background: #{color(it_index)}"/></div>
+                            </div>
+                            <span class="pd_exp_pct"><t t-esc="it.share.toFixed(1)"/>%</span>
+                        </div>
+                    </div>
+                </div>
+            </t>
+
+            <!-- قيود فئة نفقات -->
+            <t t-elif="state.modal.kind === 'expense'">
+                <div class="pd_box_stats in_modal">
+                    <div><span>إجمالي الفئة</span><b class="neg" t-esc="fmt(state.modal.item.value)"/></div>
+                    <div><span>نسبتها من النفقات</span><b t-esc="state.modal.item.share.toFixed(1) + '%'"/></div>
+                    <div><span>عدد القيود</span><b t-esc="fmt(state.modal.item.count)"/></div>
+                </div>
+                <div class="pd_empty" t-if="!state.modal.rows.length">لا توجد قيود</div>
+                <div class="pd_scroll" t-else="">
+                    <table class="pd_table">
+                        <thead><tr><th>التاريخ</th><th>المرجع</th><th>البيان</th><th>المبلغ</th></tr></thead>
+                        <tbody>
+                            <tr t-foreach="state.modal.rows" t-as="m" t-key="m_index">
+                                <td t-esc="m.date"/><td t-esc="m.ref"/><td t-esc="m.label"/>
+                                <td t-att-class="'num ' + (m.amount &lt; 0 ? 'pos' : 'neg')" t-esc="fmt(Math.abs(m.amount))"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+
+            <!-- فواتير مفتوحة لعميل / مورد -->
             <t t-else="">
                 <div class="pd_empty" t-if="!state.modal.rows.length">لا توجد فواتير مفتوحة</div>
                 <div class="pd_scroll" t-else="">

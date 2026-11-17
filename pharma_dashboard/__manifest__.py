@@ -1,7 +1,7 @@
 {
     "name": "Pharma Management Dashboard",
     "summary": "لوحة تحكم شاملة: الصناديق، الذمم، المبيعات، المخزون، الأرباح وحصص الشركاء",
-    "version": "19.0.1.0.0",
+    "version": "19.0.3.3.0",
     "category": "Reporting",
     "author": "Custom",
     "license": "LGPL-3",

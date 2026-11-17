@@ -19,6 +19,22 @@
         <field name="res_model">pharma.dashboard.share</field>
         <field name="view_mode">list</field>
     </record>
+    <record id="view_rep_list" model="ir.ui.view">
+        <field name="name">pharma.dashboard.rep.list</field>
+        <field name="model">pharma.dashboard.rep</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="user_id"/>
+                <field name="rep_type"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_rep" model="ir.actions.act_window">
+        <field name="name">المناديب</field>
+        <field name="res_model">pharma.dashboard.rep</field>
+        <field name="view_mode">list</field>
+    </record>
     <menuitem id="menu_pharma_root" name="لوحة المعلومات" sequence="1"
               web_icon="pharma_dashboard,static/description/icon.png"
               groups="pharma_dashboard.group_dashboard_viewer"/>
@@ -26,4 +42,6 @@
               action="action_pharma_dashboard" sequence="1"/>
     <menuitem id="menu_pharma_share" name="حصص الشركاء" parent="menu_pharma_root"
               action="action_share" sequence="10"/>
+    <menuitem id="menu_pharma_rep" name="المناديب" parent="menu_pharma_root"
+              action="action_rep" sequence="11"/>
 </odoo>
