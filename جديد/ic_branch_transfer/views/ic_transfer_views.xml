@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ic_transfer_list" model="ir.ui.view">
+        <field name="name">ic.stock.transfer.list</field>
+        <field name="model">ic.stock.transfer</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state == 'shipped'" decoration-success="state == 'done'"
+                  decoration-muted="state == 'cancel'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="company_id"/>
+                <field name="source_warehouse_id"/>
+                <field name="dest_company_id"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ic_transfer_form" model="ir.ui.view">
+        <field name="name">ic.stock.transfer.form</field>
+        <field name="model">ic.stock.transfer</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_confirm" string="Confirm" type="object" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Approve" type="object" class="btn-primary"
+                            invisible="state != 'to_approve'" groups="stock.group_stock_manager"/>
+                    <button name="action_draft" string="Set to Draft" type="object"
+                            invisible="state not in ('to_approve', 'cancel')"/>
+                    <button name="action_cancel" string="Cancel" type="object"
+                            invisible="state not in ('draft', 'to_approve', 'confirmed')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,confirmed,shipped,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_out_picking" type="object" class="oe_stat_button"
+                                icon="fa-truck" invisible="not out_picking_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Delivery</span>
+                            </div>
+                        </button>
+                        <button name="action_view_in_picking" type="object" class="oe_stat_button"
+                                icon="fa-download" invisible="not in_picking_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Receipt</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="From">
+                            <field name="company_id"/>
+                            <field name="source_warehouse_id" readonly="state != 'draft'"
+                                   options="{'no_create': True}"/>
+                        </group>
+                        <group string="To (Branch)">
+                            <field name="dest_company_id" readonly="state != 'draft'"
+                                   options="{'no_create': True}"/>
+                            <field name="dest_warehouse_id" readonly="state != 'draft'"
+                                   invisible="not dest_company_id"
+                                   context="{'allowed_company_ids': [company_id, dest_company_id]}"
+                                   options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="date" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Products" name="products">
+                            <field name="line_ids" readonly="state != 'draft'">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="quantity"/>
+                                    <field name="uom_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ic_transfer_search" model="ir.ui.view">
+        <field name="name">ic.stock.transfer.search</field>
+        <field name="model">ic.stock.transfer</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="dest_company_id"/>
+                <filter name="f_shipped" string="In Transit" domain="[('state', '=', 'shipped')]"/>
+                <filter name="f_to_approve" string="Waiting Approval" domain="[('state', '=', 'to_approve')]"/>
+                <group>
+                    <filter name="g_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="g_dest" string="Branch" context="{'group_by': 'dest_company_id'}"/>
+                    <filter name="g_source" string="From Company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_ic_stock_transfer" model="ir.actions.act_window">
+        <field name="name">Branch Transfers</field>
+        <field name="res_model">ic.stock.transfer</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_ic_stock_transfer" name="Branch Transfers"
+              parent="stock.menu_stock_warehouse_mgmt" action="action_ic_stock_transfer"
+              sequence="25"/>
+</odoo>

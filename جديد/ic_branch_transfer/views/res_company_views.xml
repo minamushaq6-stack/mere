@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_company_form_ic_transfer" model="ir.ui.view">
+        <field name="name">res.company.form.ic.transfer</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Branch Transfers" name="ic_transfer">
+                    <group>
+                        <field name="ic_transfer_require_approval"/>
+                        <field name="ic_transfer_notify_user_ids" widget="many2many_tags"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
